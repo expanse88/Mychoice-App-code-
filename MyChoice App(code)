@@ -1,0 +1,107 @@
+ // app/build.gradle
+
+dependencies {
+    implementation "com.android.support:appcompat-v7:28.0.0"
+    implementation "com.android.support.constraint:constraint-layout:1.1.3"
+    implementation "com.android.billingclient:billing:5.0.0"  // Google Play Billing Library
+    implementation "com.revenuecat.purchases:purchases-core:4.0.0"  // RevenueCat SDK
+}
+
+<!-- AndroidManifest.xml -->
+<application>
+    <!-- Other configurations -->
+    <meta-data
+        android:name="com.revenuecat.purchases.api_key"
+        android:value="YOUR_REVENUECAT_API_KEY" />
+</application>
+
+<!-- res/layout/activity_main.xml -->
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:id="@+id/title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Welcome to MyChoice App!"
+        android:textSize="24sp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="50dp" />
+
+    <Button
+        android:id="@+id/purchaseButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Buy Premium"
+        android:layout_below="@id/title"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp" />
+
+</RelativeLayout>
+
+// MainActivity.kt
+package com.example.mychoiceapp
+
+import android.os.Bundle
+import android.widget.Button
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import com.revenuecat.purchases.Purchases
+import com.revenuecat.purchases.PurchasesConfiguration
+import com.revenuecat.purchases.interfaces.PurchasesListener
+import com.revenuecat.purchases.models.PurchaserInfo
+import com.revenuecat.purchases.models.Package
+
+class MainActivity : AppCompatActivity() {
+
+    private lateinit var purchaseButton: Button
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        // Initialize RevenueCat
+        val configuration = PurchasesConfiguration.Builder("YOUR_REVENUECAT_API_KEY")
+            .build()
+        Purchases.configure(configuration)
+
+        // UI Elements
+        purchaseButton = findViewById(R.id.purchaseButton)
+        val title: TextView = findViewById(R.id.title)
+
+        // Set up button click listener
+        purchaseButton.setOnClickListener {
+            makePurchase()
+        }
+    }
+
+    private fun makePurchase() {
+        // Fetch available packages
+        Purchases.sharedInstance.getOfferings { offerings ->
+            val packageToPurchase = offerings?.current?.availablePackages?.firstOrNull()
+
+            packageToPurchase?.let { pkg ->
+                Purchases.sharedInstance.purchasePackage(pkg) { purchaserInfo, error ->
+                    if (error != null) {
+                        // Handle error
+                        println("Error making purchase: ${error.message}")
+                    } else {
+                        // Handle successful purchase
+                        handleSuccessfulPurchase(purchaserInfo)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun handleSuccessfulPurchase(purchaserInfo: PurchaserInfo?) {
+        // Process successful purchase
+        purchaserInfo?.let {
+            if (it.entitlements.active.isNotEmpty()) {
+                // User has access to premium content
+                println("Purchase successful!")
+            }
+        }
+    }
+}
